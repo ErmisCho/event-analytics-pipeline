@@ -1,0 +1,17 @@
+# Python caches and build metadata
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# Generated demo data
+/data/raw/events.csv
+/data/processed/
+
+# Local OS/editor files
+.DS_Store
+Thumbs.db
