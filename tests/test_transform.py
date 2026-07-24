@@ -2,6 +2,7 @@ import json
 from datetime import datetime
 
 import pandas as pd
+import pytest
 
 from event_analytics_pipeline.analytics import entity_metrics
 from event_analytics_pipeline.transform import transform_events
@@ -56,8 +57,8 @@ def test_duplicates_are_removed_and_metrics_are_correct(tmp_path):
     assert report["total_impressions"] == 110
     assert report["total_clicks"] == 10
     assert report["total_cost"] == 28.0
-    assert report["min_event_timestamp"] == "2025-01-01T00:00:00"
-    assert report["max_event_timestamp"] == "2025-01-03T00:00:00"
+    assert report["min_event_timestamp"] == "2025-01-01T00:00:00+00:00"
+    assert report["max_event_timestamp"] == "2025-01-03T00:00:00+00:00"
     datetime.fromisoformat(report["generated_at"])
     assert rejected_path.exists()
     assert pd.read_csv(rejected_path).empty
@@ -100,3 +101,67 @@ def test_data_quality_report_and_rejected_records_count_invalid_and_duplicates(t
     assert len(rejected) == 3
     assert set(rejected["event_id"]) == {"evt_2", "evt_3", "evt_4"}
     assert "rejection_reason" in rejected.columns
+
+
+def test_reruns_are_idempotent_and_accept_late_events(tmp_path):
+    raw_path = tmp_path / "events.csv"
+    parquet_path = tmp_path / "events"
+    report_path = tmp_path / "report.json"
+    rejected_path = tmp_path / "rejected.csv"
+    columns = {
+        "entity_id": "campaign_1",
+        "source": "search",
+        "event_type": "click",
+        "country": "AT",
+        "impressions": 100,
+        "clicks": 10,
+        "cost": 20.0,
+    }
+    pd.DataFrame([{"event_id": "001", "event_timestamp": "2025-01-02", **columns}]).to_csv(raw_path, index=False)
+    transform_events(raw_path, parquet_path, report_path, rejected_path)
+
+    pd.DataFrame(
+        [
+            {"event_id": "001", "event_timestamp": "2025-01-02", **columns},
+            {"event_id": "1", "event_timestamp": "2025-01-02T00:30:00+01:00", **columns},
+        ]
+    ).to_csv(raw_path, index=False)
+    result = transform_events(raw_path, parquet_path, report_path, rejected_path)
+
+    assert result["event_id"].tolist() == ["001", "1"]
+    assert (parquet_path / "event_date=2025-01-01").is_dir()
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert (report["records_existing"], report["records_inserted"], report["records_written"]) == (1, 1, 2)
+
+    rerun = transform_events(raw_path, parquet_path, report_path, rejected_path)
+    assert rerun["event_id"].tolist() == ["001", "1"]
+    assert len(pd.read_parquet(parquet_path)) == 2
+
+
+def test_failed_write_preserves_existing_dataset(tmp_path, monkeypatch):
+    raw_path = tmp_path / "events.csv"
+    parquet_path = tmp_path / "events"
+    frame = pd.DataFrame(
+        {
+            "event_id": ["evt_1"],
+            "entity_id": ["campaign_1"],
+            "source": ["search"],
+            "event_type": ["click"],
+            "country": ["AT"],
+            "impressions": [100],
+            "clicks": [10],
+            "cost": [20.0],
+            "event_timestamp": ["2025-01-01"],
+        }
+    )
+    frame.to_csv(raw_path, index=False)
+    transform_events(raw_path, parquet_path, tmp_path / "report.json", tmp_path / "rejected.csv")
+
+    def fail_write(*args, **kwargs):
+        raise RuntimeError("disk full")
+
+    monkeypatch.setattr(pd.DataFrame, "to_parquet", fail_write)
+    with pytest.raises(RuntimeError, match="disk full"):
+        transform_events(raw_path, parquet_path, tmp_path / "report.json", tmp_path / "rejected.csv")
+
+    assert pd.read_parquet(parquet_path)["event_id"].tolist() == ["evt_1"]

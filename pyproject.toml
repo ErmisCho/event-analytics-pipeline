@@ -1,7 +1,7 @@
 [project]
 name = "event-analytics-pipeline"
 version = "0.1.0"
-description = "Small local event analytics data engineering demo"
+description = "Local privacy-conscious campaign analytics pipeline"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

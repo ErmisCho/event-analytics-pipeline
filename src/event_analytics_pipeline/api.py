@@ -9,7 +9,7 @@ from pydantic import BaseModel
 
 from event_analytics_pipeline.analytics import entity_metrics, summary_metrics
 
-app = FastAPI(title="Event Analytics Pipeline")
+app = FastAPI(title="Campaign Event Analytics Pipeline")
 
 
 class EntityAnalyticsResponse(BaseModel):

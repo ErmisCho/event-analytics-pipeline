@@ -40,6 +40,6 @@ def validate_events(df: pd.DataFrame) -> None:
     if (clicks > impressions).any():
         raise ValueError("clicks must be <= impressions")
 
-    timestamps = pd.to_datetime(df["event_timestamp"], errors="coerce")
+    timestamps = pd.to_datetime(df["event_timestamp"], errors="coerce", utc=True, format="mixed")
     if timestamps.isna().any():
         raise ValueError("event_timestamp must be parseable")

@@ -7,7 +7,7 @@ import pandas as pd
 
 SOURCES = ["programmatic", "social", "search", "direct"]
 EVENT_TYPES = ["view", "click", "conversion"]
-COUNTRIES = ["US", "CA", "GB", "DE", "FR", "AU"]
+COUNTRIES = ["AT", "DE", "CH", "CZ", "IT", "SI"]
 
 
 def generate_events(output_path: str | Path = "data/raw/events.csv", rows: int = 1_000, seed: int = 42) -> pd.DataFrame:
@@ -19,7 +19,7 @@ def generate_events(output_path: str | Path = "data/raw/events.csv", rows: int =
     impressions = rng.integers(0, 1_000, size=rows)
     clicks = np.array([rng.integers(0, value + 1) for value in impressions])
     cost = np.round(rng.uniform(0, 25, size=rows) * np.maximum(clicks, 1), 2)
-    start = pd.Timestamp("2025-01-01")
+    start = pd.Timestamp("2025-01-01", tz="UTC")
     timestamps = start + pd.to_timedelta(rng.integers(0, 60 * 60 * 24 * 30, size=rows), unit="s")
 
     df = pd.DataFrame(
