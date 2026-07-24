@@ -34,6 +34,11 @@ def test_analytics_query_groups_correctly(tmp_path):
     assert first["ctr"] == 0.1
     assert first["cpc"] == 25.0 / 15
 
+    filtered = entity_metrics(parquet_path, source="social", entity_id="entity_2", limit=1)
+    assert filtered[["entity_id", "source"]].to_dict(orient="records") == [
+        {"entity_id": "entity_2", "source": "social"}
+    ]
+
 
 def test_analytics_query_reads_partitioned_parquet_directory(tmp_path):
     parquet_path = tmp_path / "events"

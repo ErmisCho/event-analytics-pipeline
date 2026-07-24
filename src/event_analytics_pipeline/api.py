@@ -62,15 +62,11 @@ def analytics_entities(
     limit: Annotated[int, Query(ge=1, le=1000)] = 100,
 ) -> list[dict[str, object]]:
     try:
-        df = entity_metrics()
+        df = entity_metrics(source=source, entity_id=entity_id, limit=limit)
     except duckdb.IOException as exc:
         if "No files found" in str(exc):
             raise _data_not_ready_error() from exc
         raise
-    if source is not None:
-        df = df[df["source"] == source]
-    if entity_id is not None:
-        df = df[df["entity_id"] == entity_id]
 
-    records = df.head(limit).to_dict(orient="records")
+    records = df.to_dict(orient="records")
     return jsonable_encoder(records)

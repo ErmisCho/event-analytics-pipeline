@@ -5,8 +5,8 @@ from fastapi.testclient import TestClient
 from event_analytics_pipeline import api
 
 
-def sample_metrics() -> pd.DataFrame:
-    return pd.DataFrame(
+def sample_metrics(source=None, entity_id=None, limit=None) -> pd.DataFrame:
+    df = pd.DataFrame(
         [
             {
                 "entity_id": "entity_1",
@@ -37,6 +37,11 @@ def sample_metrics() -> pd.DataFrame:
             },
         ]
     )
+    if source is not None:
+        df = df[df["source"] == source]
+    if entity_id is not None:
+        df = df[df["entity_id"] == entity_id]
+    return df if limit is None else df.head(limit)
 
 
 def sample_summary() -> dict[str, int | float | str]:
@@ -205,7 +210,7 @@ def test_analytics_summary_returns_clear_error_when_data_is_missing(monkeypatch)
 
 
 def test_analytics_entities_returns_clear_error_when_data_is_missing(monkeypatch):
-    def missing_entities():
+    def missing_entities(**kwargs):
         raise duckdb.IOException('IO Error: No files found that match the pattern "data/processed/events/**/*.parquet"')
 
     monkeypatch.setattr(api, "entity_metrics", missing_entities)

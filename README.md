@@ -108,6 +108,8 @@ One observed run on 2026-07-23 produced:
 
 This is one local observation of a bounded workload, not a throughput, scalability, production-capacity, or SLA claim. Deterministic input makes results reproducible logically; runtime and output bytes still vary by hardware, filesystem, package versions, and system load.
 
+For the entity API query, a separate 300,000-row comparison on the same machine measured 15 runs of an exact `source` and `entity_id` lookup. Pushing those filters and `limit` into DuckDB reduced median latency from 55.54 ms to 50.58 ms (1.10x). The modest gain shows that full Parquet discovery and scanning still dominate this workload.
+
 ## Engineering decisions
 
 - **Invalid schema vs. invalid row:** missing required columns stop the batch because the contract is unknown; malformed rows are quarantined so valid records can continue.
@@ -121,13 +123,13 @@ This is one local observation of a bounded workload, not a throughput, scalabili
 
 - **Batch transform:** pandas loads the raw CSV and, on incremental runs, the existing Parquet dataset into memory. Rejection reasons are calculated row by row with `DataFrame.apply`, then the merged dataset is sorted and fully rewritten to a temporary partitioned dataset before replacement. This avoids replacing the dataset with an incomplete write, but makes memory, CPU time, and rewrite I/O grow with the full dataset rather than only the new batch.
 - **Parquet layout:** the full rewrite emits files under one directory per `event_date`. Partitioning can reduce reads only when a date predicate reaches the Parquet scan; the current analytics queries use a recursive glob with no date predicate, so they scan every date partition. As dates accumulate, small per-date files can make file discovery and planning significant relative to useful data reads.
-- **DuckDB and API queries:** every analytics request opens a fresh in-memory DuckDB connection and scans Parquet. The entities endpoint aggregates all entity/source groups first; its `source`, `entity_id`, and `limit` filters are then applied to the returned pandas frame, so they do not reduce the underlying scan or aggregation. FastAPI handlers are synchronous and perform this local blocking work during each request; this is suitable for a local demo, not a production serving claim.
+- **DuckDB and API queries:** every analytics request opens a fresh in-memory DuckDB connection and scans Parquet. The entities endpoint pushes `source`, `entity_id`, and `limit` into DuckDB, avoiding unnecessary aggregation and transfer to pandas, but it has no date filter and still discovers every partition. FastAPI handlers are synchronous and perform this local blocking work during each request; this is suitable for a local demo, not a production serving claim.
 
 Use measurements to decide when to change the design rather than choosing an arbitrary row-count threshold:
 
 1. Record transform wall time and peak RSS for representative fresh and incremental batches, and compare them with available memory and the required batch window. If either constraint is missed, first vectorise the row-wise rejection checks, read only needed columns or chunks, and rewrite only affected partitions where the immutable-ID contract permits it.
 2. Profile DuckDB queries and track files and bytes scanned versus files and bytes needed, plus file-discovery/planning time versus execution time. Scan amplification calls for predicate and column pushdown; planning dominated by many small files calls for compaction or a coarser partition layout.
-3. Load-test endpoint p95 latency, errors, and resource saturation at the expected concurrency. If the measured service target is missed, first push API filters and limits into SQL, add suitable pre-aggregations or caching, and avoid redundant scans before changing the serving architecture.
+3. Load-test endpoint p95 latency, errors, and resource saturation at the expected concurrency. If the measured service target is missed, first add bounded date filters, suitable pre-aggregations, or caching and avoid redundant scans before changing the serving architecture.
 
 Optimise and remeasure the single-machine path first. Consider distributed processing or cloud services only when those local changes still cannot meet measured memory, batch-window, scan, or latency/concurrency requirements. The AWS mapping below is conceptual only; this repository does not claim AWS or Spark implementation experience.
 

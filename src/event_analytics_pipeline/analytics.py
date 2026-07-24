@@ -14,10 +14,25 @@ def _parquet_scan_path(parquet_path: str | Path) -> str:
     return str(path / "**" / "*.parquet")
 
 
-def entity_metrics(parquet_path: str | Path = "data/processed/events") -> pd.DataFrame:
-    """Return entity/source metrics from processed Parquet, sorted by spend."""
+def entity_metrics(
+    parquet_path: str | Path = "data/processed/events",
+    *,
+    source: str | None = None,
+    entity_id: str | None = None,
+    limit: int | None = None,
+) -> pd.DataFrame:
+    """Return filtered entity/source metrics from processed Parquet, sorted by spend."""
     parquet_path = _parquet_scan_path(parquet_path)
-    query = """
+    filters: list[str] = []
+    parameters: list[object] = [parquet_path]
+    if source is not None:
+        filters.append("source = ?")
+        parameters.append(source)
+    if entity_id is not None:
+        filters.append("entity_id = ?")
+        parameters.append(entity_id)
+
+    query = f"""
         SELECT
             entity_id,
             source,
@@ -27,11 +42,15 @@ def entity_metrics(parquet_path: str | Path = "data/processed/events") -> pd.Dat
             CASE WHEN SUM(impressions) = 0 THEN 0 ELSE SUM(clicks)::DOUBLE / SUM(impressions) END AS ctr,
             CASE WHEN SUM(clicks) = 0 THEN 0 ELSE SUM(cost)::DOUBLE / SUM(clicks) END AS cpc
         FROM read_parquet(?)
+        {"WHERE " + " AND ".join(filters) if filters else ""}
         GROUP BY entity_id, source
         ORDER BY total_cost DESC
+        {"LIMIT ?" if limit is not None else ""}
     """
+    if limit is not None:
+        parameters.append(limit)
     with duckdb.connect(database=":memory:") as conn:
-        return conn.execute(query, [parquet_path]).fetchdf()
+        return conn.execute(query, parameters).fetchdf()
 
 
 def summary_metrics(parquet_path: str | Path = "data/processed/events") -> dict[str, int | float | str | None]:
