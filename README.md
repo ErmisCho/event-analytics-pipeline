@@ -1,5 +1,7 @@
 # Campaign Event Analytics Pipeline
 
+[![CI](https://github.com/ErmisCho/event-analytics-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/ErmisCho/event-analytics-pipeline/actions/workflows/ci.yml)
+
 A local campaign reporting pipeline for a fictional Austrian SME. It turns raw advertising delivery records into trustworthy campaign metrics while keeping the sample workflow local and free of personal data.
 
 ## The problem
@@ -31,6 +33,21 @@ Pipeline files:
 - `src/event_analytics_pipeline/transform.py` quarantines invalid rows, incrementally merges valid events, calculates CTR/CPC, and replaces partitioned Parquet only after its successor is written
 - `src/event_analytics_pipeline/analytics.py` aggregates Parquet data with DuckDB SQL
 - `src/event_analytics_pipeline/api.py` exposes the aggregates through FastAPI
+
+## CV and interview evidence
+
+Evidence-backed CV bullet:
+
+> Built an end-to-end Python batch analytics pipeline that validates and quarantines malformed advertising events, performs deterministic deduplication and idempotent late-event merges, writes date-partitioned Parquet, queries aggregates with DuckDB SQL, and serves typed FastAPI endpoints; verified by 29 pytest tests and GitHub Actions on Python 3.10 and 3.13.
+
+| Claim | Repository evidence |
+|---|---|
+| Batch ETL and data quality | `validation.py`, `transform.py`, rejected-row CSV, and JSON quality report |
+| Parquet data-lake patterns and SQL analytics | Date-partitioned output in `transform.py`; parameterised DuckDB queries in `analytics.py` |
+| REST API design | Typed summary/entity responses, filters, limits, and clear missing-data errors in `api.py` |
+| Reliability and reproducibility | Idempotent merge and failed-write tests, deterministic generator, benchmark command, and CI matrix |
+
+When using this repository for AI-assisted CV tailoring, preserve its scope: it is a local, synthetic portfolio project. The AWS section is a conceptual mapping only. Do not claim hands-on AWS or Spark work, deployment, orchestration, streaming, authentication, a dashboard, or production-scale operation from this repository. Treat the benchmark as one bounded local observation, not a throughput or SLA claim.
 
 ## Setup
 
