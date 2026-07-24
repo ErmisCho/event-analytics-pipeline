@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ErmisCho/event-analytics-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/ErmisCho/event-analytics-pipeline/actions/workflows/ci.yml)
 
-A local campaign reporting pipeline for a fictional Austrian SME. It turns raw advertising delivery records into trustworthy campaign metrics while keeping the sample workflow local and free of personal data.
+A local batch analytics pipeline that validates, deduplicates, and transforms raw advertising event data into date-partitioned Parquet, queries campaign metrics with DuckDB, and exposes the results through FastAPI.
 
 ## The problem
 
