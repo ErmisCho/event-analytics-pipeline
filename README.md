@@ -1,6 +1,6 @@
 # Campaign Event Analytics Pipeline
 
-[![CI](https://github.com/ErmisCho/event-analytics-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/ErmisCho/event-analytics-pipeline/actions/workflows/ci.yml)
+[![CI](https://github.com/ErmisCho/campaign-event-analytics-pipeline/actions/workflows/ci.yml/badge.svg)](https://github.com/ErmisCho/campaign-event-analytics-pipeline/actions/workflows/ci.yml)
 
 A local batch analytics pipeline that validates, deduplicates, and transforms raw advertising event data into date-partitioned Parquet, queries campaign metrics with DuckDB, and exposes the results through FastAPI.
 
@@ -19,6 +19,12 @@ This project provides a bounded batch workflow that:
 - serves typed summary and campaign results through FastAPI
 
 The generated dataset is synthetic. It contains campaign identifiers and coarse country codes, but no names, email addresses, device identifiers, or other personal data.
+
+## Workflow preview
+
+[![Campaign analytics workflow preview showing the live OpenAPI interface, summary metrics, and filtered entity analytics](docs/campaign-analytics-demo.gif)](docs/campaign-analytics-demo.mp4)
+
+_OpenAPI → aggregate summary → filtered entity analytics. The recording uses the repository's deterministic synthetic dataset and a locally running FastAPI service._
 
 ## Architecture
 
